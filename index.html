@@ -317,7 +317,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--text2);vertical-align:mi
     </div>
     <button class="btn-login" onclick="doAdminLogin()">🔑 &nbsp;Sign In to Admin</button>
     <div class="l-err" id="loginErr"></div>
-    <p class="l-hint">Email: <b><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bfcd89898a878f89888c8cffd8d2ded6d391dcd0d2">[email&#160;protected]</a></b><br>Password: <b>COMEX-1994</b></p>
+    <p class="l-hint">Email: <b>r665806733@gmail.com</b><br>Password: <b>COMEX-1994</b></p>
   </div>
 </div>
 
@@ -643,7 +643,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--text2);vertical-align:mi
         <!-- TAB 1: LIVE TRADES -->
         <div id="atPane1">
           <div class="table-wrap">
-            <div class="table-toolbar"><span class="tb-title">⚡ &nbsp;Active Trades — Set Win or Lose</span><span style="font-size:11px;color:var(--sub);margin-left:auto">Real-time · Auto refreshes</span></div>
+            <div class="table-toolbar">
+              <span class="tb-title">⚡ &nbsp;Active Trades — Set Win or Lose</span>
+              <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
+                <span style="font-size:10px;color:var(--sub)">Bulk:</span>
+                <button class="act-btn" style="background:rgba(39,201,110,.2);color:var(--up);border:1px solid rgba(39,201,110,.4);font-weight:700"
+                  onclick="setBulkResult('win')">🏆 All WIN</button>
+                <button class="act-btn" style="background:rgba(255,61,85,.15);color:var(--dn);border:1px solid rgba(255,61,85,.35);font-weight:700"
+                  onclick="setBulkResult('lose')">💔 All LOSE</button>
+              </div>
+            </div>
             <div class="table-scroll">
               <table>
                 <thead><tr><th>Trader</th><th>Direction</th><th>Symbol</th><th>Amount</th><th>Duration</th><th>Profit %</th><th>Status</th><th>Time</th><th>Actions</th></tr></thead>
@@ -844,7 +853,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--text2);vertical-align:mi
 <!-- Firebase SDKs -->
 
 <!-- Firebase SDKs -->
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
@@ -910,12 +919,27 @@ async function doAdminLogin() {
   const email=document.getElementById('loginEmail').value.trim();
   const pass=document.getElementById('loginPass').value;
   const errEl=document.getElementById('loginErr');
+  const btn=document.querySelector('.btn-login');
   errEl.textContent='';
-  if(!fbReady){errEl.textContent='⚠️ Firebase not connected';return;}
-  if(!email||!pass){errEl.textContent='⚠️ Fill all fields.';return;}
-  if(email!==ADMIN_EMAIL){errEl.textContent='❌ Not an admin account.';return;}
-  try { await auth.signInWithEmailAndPassword(email,pass); }
-  catch(e){const m={'auth/wrong-password':'❌ Wrong password.','auth/invalid-credential':'❌ Invalid credentials.','auth/user-not-found':'❌ Account not found.'};errEl.textContent=m[e.code]||'❌ '+e.message;}
+  if(!fbReady){errEl.textContent='⚠️ Firebase မချိတ်မိပါ - Internet စစ်ဆေးပါ';return;}
+  if(!email){errEl.textContent='⚠️ Email ထည့်ပါ';return;}
+  if(!pass){errEl.textContent='⚠️ Password ထည့်ပါ';return;}
+  if(email!==ADMIN_EMAIL){errEl.textContent='❌ Admin email မဟုတ်ပါ';return;}
+  if(btn){btn.textContent='⏳ Logging in...';btn.disabled=true;}
+  try {
+    await auth.signInWithEmailAndPassword(email,pass);
+  } catch(e){
+    const m={
+      'auth/wrong-password':'❌ Password မှားသည်',
+      'auth/invalid-credential':'❌ Email/Password မှားသည်',
+      'auth/user-not-found':'❌ Account ရှာမတွေ့',
+      'auth/too-many-requests':'⚠️ Login ကြိမ်များလွန်း - ခဏနားပါ',
+      'auth/network-request-failed':'⚠️ Network error - Internet စစ်ပါ',
+    };
+    errEl.textContent=m[e.code]||'❌ '+e.message;
+  } finally {
+    if(btn){btn.textContent='\uD83D\uDD11\u00a0 Sign In to Admin';btn.disabled=false;}
+  }
 }
 async function doLogout(){if(auth)await auth.signOut();}
 
@@ -1456,38 +1480,143 @@ async function setUserPreset(uid, name, result) {
 // ========================================================
 function renderActiveTrades(){
   const p=allActiveTrades.length;
-  const all_settled_snap = []; // We only track pending here
   const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   s('at-pending',p); s('at-wins','—'); s('at-losses','—');
   const tb=document.getElementById('atTableBody');if(!tb)return;
-  if(!allActiveTrades.length){tb.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="empty-ico">⚡</div><p>No active trades right now.</p></div></td></tr>';return;}
+  if(!allActiveTrades.length){tb.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="empty-ico">⚡</div><p>Active trade မရှိပါ</p></div></td></tr>';return;}
   tb.innerHTML=allActiveTrades.map(t=>{
     const age=Date.now()-(t.timestamp||0);
     const ageStr=age<60000?Math.round(age/1000)+'s ago':Math.round(age/60000)+'m ago';
+    const amt=Number(t.amount||0);
+    const pct=Number(t.profitPct||85);
+    const payout=(amt + amt*pct/100).toFixed(2);
     return `<tr>
       <td><div class="td-name">${esc(t.userName||t.userId?.slice(0,8)||'—')}</div><div class="td-uid">${esc(t.userId||'').slice(0,10)}</div></td>
       <td><span style="padding:4px 10px;border-radius:7px;font-size:12px;font-weight:700;background:rgba(${t.dir==='BUY'?'39,201,110':'255,61,85'},.15);color:${t.dir==='BUY'?'var(--up)':'var(--dn)'}">${t.dir||'—'}</span></td>
       <td class="td-mono" style="color:var(--gold2)">${esc(t.symbol||'—')}</td>
-      <td class="td-mono td-gold">$${Number(t.amount||0).toLocaleString()}</td>
+      <td class="td-mono td-gold">$${amt.toLocaleString()}</td>
       <td class="td-uid">${t.durationSec||'—'}s</td>
-      <td style="color:var(--up);font-weight:700">+${t.profitPct||0}%</td>
+      <td style="color:var(--up);font-weight:700">+${pct}%</td>
       <td><span style="color:var(--orange);font-weight:600">⏳ Pending</span></td>
       <td class="td-uid">${ageStr}</td>
       <td>
         <div class="action-row">
-          <button class="act-btn" style="background:rgba(39,201,110,.2);color:var(--up);border:1px solid rgba(39,201,110,.4);font-size:12px;padding:6px 14px;font-weight:700" onclick="setTradeResult('${t.id}','win')">🏆 WIN</button>
-          <button class="act-btn" style="background:rgba(255,61,85,.15);color:var(--dn);border:1px solid rgba(255,61,85,.35);font-size:12px;padding:6px 14px;font-weight:700" onclick="setTradeResult('${t.id}','lose')">💔 LOSE</button>
+          <button class="act-btn" title="Payout: $${payout}"
+            style="background:rgba(39,201,110,.2);color:var(--up);border:1px solid rgba(39,201,110,.4);font-size:11px;padding:5px 10px;font-weight:700"
+            onclick="setTradeResult('${t.id}','win')">🏆 WIN<br><span style="font-size:9px;opacity:.8">$${payout}</span></button>
+          <button class="act-btn"
+            style="background:rgba(255,61,85,.15);color:var(--dn);border:1px solid rgba(255,61,85,.35);font-size:12px;padding:6px 14px;font-weight:700"
+            onclick="setTradeResult('${t.id}','lose')">💔 LOSE</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-async function setTradeResult(tradeId,result){
-  try{
-    await db.collection('activeTrades').doc(tradeId).update({status:result,resolvedAt:firebase.firestore.FieldValue.serverTimestamp(),resolvedBy:auth.currentUser?.email});
-    toast(result==='win'?'Trade set to WIN 🏆':'Trade set to LOSE 💔',result==='win'?'ok':'info');
-  }catch(e){toast('Error: '+e.message,'err');}
+async function setTradeResult(tradeId, result) {
+  const trade = allActiveTrades.find(t => t.id === tradeId);
+  if(!trade) { toast('Trade not found','err'); return; }
+
+  // Confirm before setting LOSE (irreversible)
+  if(result === 'lose') {
+    const ok = confirm(`💔 "${trade.userName||trade.userId?.slice(0,8)||'User'}" ၏ Trade ကို LOSE သတ်မှတ်ရန် သေချာပါသလား?\n\nAmount: $${Number(trade.amount||0).toLocaleString()}\n\nUser ၏ Balance မပြောင်းဘဲ Trade ကိုပဲ Lose အဖြစ်မှတ်မည်။`);
+    if(!ok) return;
+  }
+
+  try {
+    const batch = db.batch();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const admin = auth.currentUser?.email || 'admin';
+
+    // 1. Update activeTrades document status
+    batch.update(db.collection('activeTrades').doc(tradeId), {
+      status: result,
+      resolvedAt: now,
+      resolvedBy: admin,
+    });
+
+    // 2. If WIN → credit user balance (return capital + profit)
+    if(result === 'win' && trade.userId) {
+      const amount     = Number(trade.amount || 0);
+      const profitPct  = Number(trade.profitPct || 85);
+      const profit     = amount * profitPct / 100;
+      const payout     = amount + profit;           // capital returned + profit
+
+      batch.update(db.collection('users').doc(trade.userId), {
+        'balance.usd': firebase.firestore.FieldValue.increment(payout),
+        lastTradeAt: now,
+      });
+
+      // 3. Write to completedTrades log
+      const completedRef = db.collection('completedTrades').doc(tradeId);
+      batch.set(completedRef, {
+        ...trade,
+        status: 'win',
+        payout,
+        profit,
+        resolvedAt: now,
+        resolvedBy: admin,
+      });
+
+      await batch.commit();
+      toast(`🏆 WIN! ${trade.userName||'User'} ကို $${payout.toLocaleString()} ပြန်ထည့်ပြီ (+$${profit.toFixed(2)} profit) ✅`, 'ok');
+
+    } else if(result === 'lose') {
+      // LOSE → no balance change (amount was already deducted when trade opened)
+      // Write to completedTrades log
+      const completedRef = db.collection('completedTrades').doc(tradeId);
+      batch.set(completedRef, {
+        ...trade,
+        status: 'lose',
+        payout: 0,
+        profit: -Number(trade.amount || 0),
+        resolvedAt: now,
+        resolvedBy: admin,
+      });
+
+      await batch.commit();
+      toast(`💔 LOSE! ${trade.userName||'User'} ၏ Trade ကို Lose သတ်မှတ်ပြီ`, 'info');
+    }
+
+  } catch(e) { toast('Error: '+e.message, 'err'); }
+}
+
+// ========================================================
+// BULK WIN/LOSE — Set all active trades at once
+// ========================================================
+async function setBulkResult(result) {
+  if(!allActiveTrades.length) { toast('Active trade မရှိပါ','info'); return; }
+  const label = result === 'win' ? '🏆 WIN' : '💔 LOSE';
+  const ok = confirm(`${label} — Active trade ${allActiveTrades.length} ခုအားလုံးကို ${label} သတ်မှတ်ရန် သေချာပါသလား?`);
+  if(!ok) return;
+  let success=0, fail=0;
+  for(const trade of allActiveTrades) {
+    try {
+      const batch = db.batch();
+      const now = firebase.firestore.FieldValue.serverTimestamp();
+      batch.update(db.collection('activeTrades').doc(trade.id), {
+        status: result, resolvedAt: now, resolvedBy: auth.currentUser?.email,
+      });
+      if(result === 'win' && trade.userId) {
+        const amount = Number(trade.amount||0);
+        const payout = amount + (amount * Number(trade.profitPct||85) / 100);
+        batch.update(db.collection('users').doc(trade.userId), {
+          'balance.usd': firebase.firestore.FieldValue.increment(payout),
+          lastTradeAt: now,
+        });
+        batch.set(db.collection('completedTrades').doc(trade.id), {
+          ...trade, status:'win', payout, resolvedAt:now, resolvedBy:auth.currentUser?.email,
+        });
+      } else if(result === 'lose') {
+        batch.set(db.collection('completedTrades').doc(trade.id), {
+          ...trade, status:'lose', payout:0, resolvedAt:now, resolvedBy:auth.currentUser?.email,
+        });
+      }
+      await batch.commit();
+      success++;
+    } catch(e) { fail++; }
+  }
+  toast(`${label} — ${success} trades ပြီး${fail>0?`, ${fail} failed`:''}`, success>0?'ok':'err');
 }
 
 // ========================================================
