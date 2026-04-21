@@ -315,7 +315,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--text2);vertical-align:mi
       <label class="l-label">Password</label>
       <input class="l-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAdminLogin()">
     </div>
-    <button class="btn-login" onclick="doAdminLogin()">🔑 &nbsp;Sign In to Admin</button>
+    <button type="button" class="btn-login" onclick="doAdminLogin()">🔑 &nbsp;Sign In to Admin</button>
     <div class="l-err" id="loginErr"></div>
     <p class="l-hint">Email: <b>r665806733@gmail.com</b><br>Password: <b>COMEX-1994</b></p>
   </div>
@@ -893,6 +893,22 @@ function initFirebase() {
 }
 window.addEventListener('load',initFirebase);
 
+// Additional safeguard: Add event listener for login button
+window.addEventListener('load', function() {
+  console.log('Setting up login button listener');
+  const loginBtn = document.querySelector('.btn-login');
+  if(loginBtn) {
+    console.log('Login button found, adding click listener');
+    loginBtn.addEventListener('click', function(e) {
+      console.log('Button clicked via event listener');
+      e.preventDefault();
+      doAdminLogin();
+    });
+  } else {
+    console.error('Login button not found!');
+  }
+});
+
 // ========================================================
 // AUTH
 // ========================================================
@@ -916,19 +932,33 @@ function setupAuthListener() {
 }
 
 async function doAdminLogin() {
-  const email=document.getElementById('loginEmail').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  const errEl=document.getElementById('loginErr');
-  const btn=document.querySelector('.btn-login');
-  errEl.textContent='';
-  if(!fbReady){errEl.textContent='⚠️ Firebase မချိတ်မိပါ - Internet စစ်ဆေးပါ';return;}
-  if(!email){errEl.textContent='⚠️ Email ထည့်ပါ';return;}
-  if(!pass){errEl.textContent='⚠️ Password ထည့်ပါ';return;}
-  if(email!==ADMIN_EMAIL){errEl.textContent='❌ Admin email မဟုတ်ပါ';return;}
-  if(btn){btn.textContent='⏳ Logging in...';btn.disabled=true;}
+  console.log('doAdminLogin called'); // Debug log
   try {
+    const email=document.getElementById('loginEmail').value.trim();
+    const pass=document.getElementById('loginPass').value;
+    const errEl=document.getElementById('loginErr');
+    const btn=document.querySelector('.btn-login');
+    
+    console.log('Email:', email, 'Pass length:', pass.length); // Debug log
+    
+    errEl.textContent='';
+    if(!fbReady){
+      console.log('Firebase not ready');
+      errEl.textContent='⚠️ Firebase မချိတ်မိပါ - Internet စစ်ဆေးပါ';
+      return;
+    }
+    if(!email){errEl.textContent='⚠️ Email ထည့်ပါ';return;}
+    if(!pass){errEl.textContent='⚠️ Password ထည့်ပါ';return;}
+    if(email!==ADMIN_EMAIL){errEl.textContent='❌ Admin email မဟုတ်ပါ';return;}
+    if(btn){btn.textContent='⏳ Logging in...';btn.disabled=true;}
+    
+    console.log('Attempting login...'); // Debug log
     await auth.signInWithEmailAndPassword(email,pass);
+    console.log('Login successful'); // Debug log
   } catch(e){
+    console.error('Login error:', e); // Debug log
+    const errEl=document.getElementById('loginErr');
+    const btn=document.querySelector('.btn-login');
     const m={
       'auth/wrong-password':'❌ Password မှားသည်',
       'auth/invalid-credential':'❌ Email/Password မှားသည်',
@@ -937,8 +967,7 @@ async function doAdminLogin() {
       'auth/network-request-failed':'⚠️ Network error - Internet စစ်ပါ',
     };
     errEl.textContent=m[e.code]||'❌ '+e.message;
-  } finally {
-    if(btn){btn.textContent='\uD83D\uDD11\u00a0 Sign In to Admin';btn.disabled=false;}
+    if(btn){btn.textContent='🔑  Sign In to Admin';btn.disabled=false;}
   }
 }
 async function doLogout(){if(auth)await auth.signOut();}
